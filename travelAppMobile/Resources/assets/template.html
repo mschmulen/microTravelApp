@@ -1,0 +1,178 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN"> 
+<html lang="en"> 
+<head> 
+  <title>History Template</title> 
+  <meta name="description" content="Text orientation and typesetting in vertical
+                                    text layout with multi-directional (multi-script) text."> 
+  <style type="text/css"> 
+    .diagram-set {
+      clear: both;
+    }
+    .diagram-set:after {
+      clear: both;
+      content: "";
+      display: block;
+    }
+    .diagram-set > embed,
+    .diagram-set > object,
+    .diagram-set > img,
+    dt object {
+      float: right;
+      margin: 1%;
+      background: white;
+    }
+ 
+    .img-set {
+      text-align: center;
+    }
+ 
+    img {
+      border: 1px solid;
+    }
+    img,
+    object {
+      vertical-align: middle;
+    }
+ 
+    dt {
+      font-weight: bold;
+    }
+    td {
+      text-align: center;
+    }
+    #fantasai {
+      font-style: italic;
+    }
+  </style> 
+ 
+</head> 
+<body> 
+ 
+<div class="page" id="title"> 
+  <h1>The Story of the ESSEX</h1> 
+  <h1>Nantucket sailing ship the Essex stroy</h1> 
+ 
+  <address>
+  by Matthew A. Schmulen (<a href="http://mschmulen.github.com" id="fantasai">fantasai</a>)
+  </address> 
+</div> 
+ 
+<div class="page"> 
+  <h2>Introduction</h2> 
+ 
+  <p>yack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakj
+    <strong>lajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack</strong>,
+    lajfdlsakjyack yack acyasdklajfdlsakjyack yack acyasdklajfdlsakjyack yack?</p> 
+</div> 
+ 
+<div class="page" id="vertical-text-definition"> 
+  <h2>HEADER 2 TEXT </h2> 
+ 
+  <p style="word-spacing: -1px;">To understand how to do vertical text layout, one must first
+    understand what vertical text <em>is</em>.</p> 
+ 
+  <h3>Header 3 text</h3> 
+ 
+  <p>Vertical text is text flowed into vertical lines instead of horizontal
+    ones.</p>  
+
+<hr> 
+  <p>Vertical text layout is not just applied to vertical scripts</p> 
+ 
+ 
+  <p>or just in vertical script contexts.</p> 
+ 
+<hr> 
+  <p>There are constraints on how you can do it right.</p> 
+ 
+
+  <p>But there's not just one way to do it.</p> 
+ 
+<hr> 
+  <p>Using a sideways version of the Unicode Bidirectional Algorithm, where
+    <code>ltr</code> (&lsquo;left-to-right&rsquo;) means
+    &lsquo;top-to-bottom&rsquo; and <code>rtl</code> (&lsquo;right-to-left&rsquo;)
+    means &lsquo;bottom-to-top&rsquo;, is one way to do it.</p> 
+ 
+  <p>But it doesn't handle all cases.</p> 
+  
+  <p>Vertical text makes it possible for two <code>ltr</code> scripts to
+    go in opposite directions, and an <code>rtl</code> script to go in
+    the same direction as an <code>ltr</code> script.
+<hr> 
+  <p>Perhaps this seems like stretching the limits of multi-script
+    typography a little too much. But seemingly strange cases do exist.</p> 
+ 
+  <p class="figure-set"> 
+    <img src="diagrams/chinese-bidi-footnotes.gif" alt="" class="figure"> 
+    Chinese footnotes on an Arabic text.
+  </p> 
+ 
+  <p>Quick &#8212; from which side do I start reading this line?</p> 
+ 
+  <p class="figure-set"> 
+    <img src="diagrams/crazy-bidi-highlight.small.png" alt="" class="figure"  style="max-width: 3in"> 
+    The trouble with reading bidirectional paragraphs.
+  </p> 
+ 
+  <p>These footnotes would perhaps be a bit more readable if the typographer
+    took advantage of Chinese's vertical tradition to make both scripts read
+    in the same direction: top to bottom within a mixed-script line and right
+    to left between pages.</p> 
+</div> 
+ 
+ 
+	
+
+
+
+
+ 
+
+
+
+<div class="page" id="acknowledgements"> 
+  <h2>Acknowledgements</h2> 
+ 
+  <p>Thanks go out to:</p> 
+ 
+  <ul> 
+  <li>Martin Heijdra at the East Asian Library, for his guidance, expertise,
+      and enthusiasm. I had never imagined that the bibliographer helping
+      me find books would turn out to be an expert on international typography
+      and Mongolian in particular.
+  <li>Ian Hickson, the members of the www-style mailing list, the members of
+      the CSS Working Group, and the contributors to the Mozilla Project
+      for tempering my technical skills and CSS knowledge over the years
+  <li>The CSS Working Group for giving me a chance to fix everything I found
+      wrong in the CSS3 Text drafts.
+  <li>H&aring;kon Wium Lie and <a href="http://www.opera.com/">Opera Software</a> 
+      for supporting me in this project, to the point of even <em>paying</em> me
+      over the summer to work on it. I only wish it hadn't taken so long so that
+      I could spend more time on QA. &#x263A;
+  <li>Brian W. Kernighan for taking on the role of my project advisor within
+      the Princeton Computer Science Department.
+  </ul> 
+</div> 
+<hr> 
+<div class="page" id="bibliography"> 
+  <h2>Bibliography</h2> 
+ 
+  <ul> 
+  <li>Bert Bos; H&aring;kon Wium Lie; Chris Lilley; Ian Jacobs. <cite>Cascading
+    Style Sheets, level 2</cite>. 1998. W3C Recommendation.
+    URL: http://www.w3.org/&#x200b;TR/&#x200b;REC-CSS2
+  <li>Davis, Mark. <cite>The Bidirectional Algorithm.</cite> 17 April 2003.
+    Unicode Standard Annex #9.
+    URL: http://www.unicode.org/&#x200b;unicode/&#x200b;reports/&#x200b;tr9/&#x200b;tr9-11
+  <li>Heijdra, Martinus. Mongolian Text Layout. Spring 2003-present.
+  <li>Suignard, Michel. <cite>CSS3 Text</cite>. May 2003. W3C Candidate Recommendation.
+    URL: http://www.w3.org/&#x200b;TR/&#x200b;2003/&#x200b;CR-css3-text-20030514/
+  <li>The Unicode Consortium. <cite>The Unicode Standard: Version 4.0.0</cite>.
+    URL: http://www.unicode.org/&#x200b;unicode/&#x200b;standard/&#x200b;versions/&#x200b;enumeratedversions.html#Unicode_4_0_0
+  </ul> 
+</div> 
+ 
+</body> 
+</html>

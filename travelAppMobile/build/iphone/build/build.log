@@ -1,0 +1,69 @@
+================================================================================
+Appcelerator Titanium Diagnostics Build Log
+The contents of this file are useful to send to Appcelerator Support if
+reporting an issue to help us understand your environment, build settings
+and aid in debugging. Please attach this log to any issue that you report.
+================================================================================
+
+Starting build at 05/10/11 13:38
+
+Build details:
+
+   timestamp=04/18/11 17:16
+   version=1.6.2
+   githash=878906d
+
+
+Script arguments:
+   /Library/Application Support/Titanium/mobilesdk/osx/1.6.2/iphone/builder.py
+   simulator
+   "4.2"
+   "/Users/mattschmulen/trees/mschmulen/travelApp/travelAppMobile"
+   com.jumptack.travelAppMobile
+   "travelAppMobile"
+   iphone
+
+Building from: /Library/Application Support/Titanium/mobilesdk/osx/1.6.2/iphone
+Platform: Darwin Kernel Version 10.7.0: Sat Jan 29 15:17:16 PST 2011; root:xnu-1504.9.37~1/RELEASE_I386
+
+Xcode path is: /Developer
+
+
+githash=878906d, existing_git_hash=878906d
+writing contents of /Users/mattschmulen/trees/mschmulen/travelApp/travelAppMobile/build/iphone/project.xcconfig:
+
+TI_VERSION=1.6.2
+TI_SDK_DIR=/Library/Application Support/Titanium/mobilesdk/osx/$(TI_VERSION)/iphone
+TI_APPID=com.jumptack.travelAppMobile
+OTHER_LDFLAGS[sdk=iphoneos4*]=$(inherited) -weak_framework iAd
+OTHER_LDFLAGS[sdk=iphonesimulator4*]=$(inherited) -weak_framework iAd
+#include "module"
+
+old contents
+
+
+Generated the following stylecode code:
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+	<dict>
+		<key>classes</key>
+		<dict>
+</dict>
+
+		<key>classes_density</key>
+		<dict>
+</dict>
+
+		<key>ids</key>
+		<dict>
+</dict>
+
+		<key>ids_density</key>
+		<dict>
+</dict>
+
+	</dict>
+</plist>
+Finishing build

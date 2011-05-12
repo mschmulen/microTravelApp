@@ -1,0 +1,2 @@
+travelAppMobile code is licensed under GNU GPL 2 or later and GNU LGPL 2 or later.
+© 2011 Matthew Schmulen

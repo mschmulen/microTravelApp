@@ -1,0 +1,1289 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN"> 
+<html lang="en"> 
+<head> 
+  <link rel="stylesheet" type="text/css" href="contents.css"> 
+  <link rel="alternate stylesheet" type="text/css" href="../../../site-style/rose/content.css" title="Rose" id="rose"> 
+  <link rel="stylesheet" type="text/css" href="paper.css" title="Paper" id="paper"> 
+  <link rel="alternate stylesheet" type="text/css" href="http://fantasai.inkedblade.net/site-style/elerentia/content.css" title="Elerentia" id="elerentia"> 
+  <title>Robust Vertical Text Layout</title> 
+  <meta name="description" content="Text orientation and typesetting in vertical
+                                    text layout with multi-directional (multi-script) text."> 
+  <style type="text/css"> 
+    .diagram-set {
+      clear: both;
+    }
+    .diagram-set:after {
+      clear: both;
+      content: "";
+      display: block;
+    }
+    .diagram-set > embed,
+    .diagram-set > object,
+    .diagram-set > img,
+    dt object {
+      float: right;
+      margin: 1%;
+      background: white;
+    }
+ 
+    .img-set {
+      text-align: center;
+    }
+ 
+    img {
+      border: 1px solid;
+    }
+    img,
+    object {
+      vertical-align: middle;
+    }
+ 
+    dt {
+      font-weight: bold;
+    }
+    td {
+      text-align: center;
+    }
+    #fantasai {
+      font-style: italic;
+    }
+  </style> 
+ 
+</head> 
+<body> 
+ 
+<div class="page" id="title"> 
+  <h1>Robust Vertical Text Layout</h1> 
+  <h1>Using the Unicode BIDI Algorithm to Handle Complexities
+    in Typesetting Multi-Script Vertical Text</h1> 
+ 
+  <address> 
+  by Elika J. Etemad (<a href="http://fantasai.inkedblade.net/contact" id="fantasai">fantasai</a>)
+  </address> 
+</div> 
+ 
+<div class="page" id="abstract"> 
+  <h2>Abstract</h2> 
+ 
+  <p>As cross-cultural written communication increases, the technology
+  underlying that communication needs to handle the intersection of
+  their layout conventions. Vertical text is the traditional mode of
+  text layout for many East Asian writing systems. It is also used
+  for effects such as vertical headers in horizontal layout. However,
+  few formatting systems today can do true vertical text layout, and
+  most of those only can only handle common scripts in right-to-left
+  columns. Methods for typesetting left-to-right columns or uncommon
+  script combinations such as Mongolian and Arabic thus often involve
+  unwieldy BIDI overrides and delicate glyph rendering tweaks. These
+  workarounds are awkward and can break the portability of the
+  underlying text. The model outlined in this paper uses the intrinsic
+  properties of the characters and an expansion of Unicode's logic to
+  lay out the text without these hacks. Such a system can scale to
+  gracefully handle any combination of scripts, can correctly lay out
+  text with any combination of styling properties, and can integrate
+  well with the layered Unicode + Markup + Styling design of
+  semantically-&#x200b;tagged documents on the Web. This model, developed
+  for the next revision of the CSS3 Text Module, is described here as a
+  CSS system, but the concepts can apply to non-CSS layout systems
+  as well.</p> 
+ 
+  <p>This paper focuses on methods for automatically handling
+  character ordering, shaping, and glyph orientation switches when
+  typesetting lesser-known scripts and unusual script combinations in
+  vertical layout, without reworking existent horizontal layout
+  algorithms or adding script-specific new modules.
+  Assumes some familiarity with Unicode BIDI.</p> 
+</div> 
+ 
+<div class="page"> 
+  <h2>Introduction</h2> 
+ 
+  <p>There is a multitude of different writings sytems in use in the world
+    today. They operate on different linguistic principles and different
+    graphic principles, and they all present their own challenges to a
+    multi-script typesetting system: combining characters, contextual shaping,
+    diacritics, bidirectionality, ligatures, etc. This document focuses on
+    one of these challenges: Given a sequence of characters in logical order
+    (the order you read them in, not the order they appear on the page),
+    and given that you already know how to compose the necessary graphemes,
+    <strong>how do you correctly and automatically arrange them into lines</strong>,
+    especially for arbitrarily mixed horizontal and vertical scripts?</p> 
+</div> 
+ 
+<div class="page" id="vertical-text-definition"> 
+  <h2>Introduction to Vertical Text</h2> 
+ 
+  <p style="word-spacing: -1px;">To understand how to do vertical text layout, one must first
+    understand what vertical text <em>is</em>.</p> 
+ 
+  <h3>Vertical Text: A Definition</h3> 
+ 
+  <p>Vertical text is text flowed into vertical lines instead of horizontal
+    ones.</p> 
+ 
+  <p class="figure-set"> 
+    <img src="diagrams/vertical-text.png" alt="" class="figure" style="max-width: 3in"> 
+    Exerpt from a vertically-set Japanese publication.
+  </p> 
+  <p>Vertical text is not simply graphical rotation.</p> 
+ 
+  <p class="figure-set"> 
+    <object data="diagrams/vertical-rotation-unmarked.svg" class="figure"
+            type="image/svg+xml" height="320" width="200"></object> 
+    Incorrect (graphically-rotated) and correct (upright stacking)
+    vertical layout of Chinese text.
+  </p> 
+<hr> 
+  <p>Vertical text layout is not just applied to vertical scripts</p> 
+ 
+  <p class="figure-set"> 
+    <img src="diagrams/vertical-english.png" alt="" class="figure"> 
+    Vertical English blockquote in vertically-set Japanese publication.
+  </p> 
+ 
+  <p>or just in vertical script contexts.</p> 
+ 
+  <p class="figure-set"> 
+    <img src="diagrams/gradebook.gif" alt="" class="figure"> 
+    Vertical English in a teacher's gradebook.
+  </p> 
+<hr> 
+  <p>There are constraints on how you can do it right.</p> 
+ 
+  <p class="figure-set"> 
+    <object data="diagrams/scrambled-vert.svg" class="figure"
+            type="image/svg+xml" height="348" width="58"></object> 
+    Scrambled vertical English where the characters are ordered to
+    face one way while the glyphs are individually rotated to face
+    the opposite direction.
+  </p> 
+ 
+  <p>But there's not just one way to do it.</p> 
+ 
+  <p class="figure-set"> 
+    <img src="diagrams/vertical-arabic-arrow.small.png" alt="" class="figure"> 
+    Two ways of handling vertical Arabic: rotating right (to read upwards)
+    or rotating left (to read downwards).
+  </p> 
+<hr> 
+  <p>Using a sideways version of the Unicode Bidirectional Algorithm, where
+    <code>ltr</code> (&lsquo;left-to-right&rsquo;) means
+    &lsquo;top-to-bottom&rsquo; and <code>rtl</code> (&lsquo;right-to-left&rsquo;)
+    means &lsquo;bottom-to-top&rsquo;, is one way to do it.</p> 
+ 
+  <p class="figure-set"> 
+    <img src="diagrams/rotate-bidi.small.png" alt="" class="figure"> 
+    BIDI Analysis of vertically-set traditional Chinese with inline Arabic.
+  </p> 
+ 
+  <p>But it doesn't handle all cases.</p> 
+ 
+  <p class="figure-set"> 
+    <img src="diagrams/vertical-chinese-english-marked.small.png" alt="" class="figure"> 
+    <!-- http://www.citypopulation.de/China-Sichuan.html --> 
+    Vertical English (bottom-to-top) header on the left of a city-population
+    table; inlining the (top-to-bottom) Chinese characters
+    corresponding to the region's name makes the text bidirectional despite
+    both scripts having left-to-right directionality.
+  </p> 
+ 
+  <p>Vertical text makes it possible for two <code>ltr</code> scripts to
+    go in opposite directions, and an <code>rtl</code> script to go in
+    the same direction as an <code>ltr</code> script.
+<hr> 
+  <p>Perhaps this seems like stretching the limits of multi-script
+    typography a little too much. But seemingly strange cases do exist.</p> 
+ 
+  <p class="figure-set"> 
+    <img src="diagrams/chinese-bidi-footnotes.gif" alt="" class="figure"> 
+    Chinese footnotes on an Arabic text.
+  </p> 
+ 
+  <p>Quick &#8212; from which side do I start reading this line?</p> 
+ 
+  <p class="figure-set"> 
+    <img src="diagrams/crazy-bidi-highlight.small.png" alt="" class="figure"  style="max-width: 3in"> 
+    The trouble with reading bidirectional paragraphs.
+  </p> 
+ 
+  <p>These footnotes would perhaps be a bit more readable if the typographer
+    took advantage of Chinese's vertical tradition to make both scripts read
+    in the same direction: top to bottom within a mixed-script line and right
+    to left between pages.</p> 
+</div> 
+ 
+ 
+<div class="page"> 
+  <h2>Analyzing Text Flow</h2> 
+ 
+  <p>The first step in creating a multi-script layout model is to define the
+    relevant properties of the layout. Every run of text has three physical
+    properties that describe the way the text flows:</p> 
+ 
+  <dl> 
+    <dt>block progression</dt> 
+    <dd>The direction the lines stack in.
+      <p class="img-set"> 
+         <object data="diagrams/stack-lr.svg"
+               type="image/svg+xml" height="93" width="63"></object> 
+         <object data="diagrams/stack-tb.svg"
+                 type="image/svg+xml" height="63" width="93"></object> 
+         <object data="diagrams/stack-rl.svg"
+               type="image/svg+xml" height="93" width="63"></object> 
+      </p> 
+    </dd> 
+    <dt>inline progression</dt> 
+    <dd>The direction characters are ordered in within the line.
+      <p class="img-set" style="display: table; width: 160px; margin: 0 auto;"> 
+        <object data="diagrams/inline-ttb.svg" style="float: right;"
+                type="image/svg+xml" height="85" width="35"></object> 
+        <object data="diagrams/inline-btt.svg" style="float: right;"
+                type="image/svg+xml" height="85" width="35"></object> 
+        <object data="diagrams/inline-ltr.svg"
+                type="image/svg+xml" height="35" width="85"></object> 
+        <object data="diagrams/inline-rtl.svg"
+                type="image/svg+xml" height="35" width="85"></object> 
+      </p> 
+    </dd> 
+    <dt>glyph orientation</dt> 
+    <dd>The direction an individual glyph is facing.
+      <p class="img-set"> 
+        <object data="diagrams/glyph-face-up.svg"
+                type="image/svg+xml" height="40" width="40"></object> 
+        <object data="diagrams/glyph-face-right.svg"
+                type="image/svg+xml" height="40" width="40"></object> 
+        <object data="diagrams/glyph-face-down.svg"
+                type="image/svg+xml" height="40" width="40"></object> 
+        <object data="diagrams/glyph-face-left.svg"
+                type="image/svg+xml" height="40" width="40"></object> 
+      </p> 
+    </dd> 
+  </dl> 
+ 
+  <p>Once all three properties are known, the text can be laid out.</p> 
+ 
+  <object data="diagrams/text-flow-vectors-tb.svg" class="figure"
+          height="160" width="220"></object> 
+</div> 
+<hr> 
+<div class="page"> 
+  <h2>Physical Text Layout</h2> 
+ 
+  <p>The most straightforward way of getting this information is to ask
+    the user. But there are several problems with this:</p> 
+ 
+  <div class="diagram-set"> 
+    <object data="diagrams/scrambled-vert.svg"
+            type="image/svg+xml" height="240" width="40"
+            style="border: none; background: transparent;"></object> 
+ 
+    <ul> 
+    <li>First of all, typesetting mixed-script text becomes a very tedious
+      task. Each change in script would require manual intervention to
+      adjust the text flow properties.
+    <li>Secondly, as we saw with the scrambled vertical English, not all
+      combinations of inline-&#x200b;progression and glyph-orientation are
+      valid for a given script. Good software should make invalid combinations
+      of user input impossible.
+    <li>Thirdly, the system doesn't capture the inter&shy;dependencies among
+      the properties. Deciding &ldquo;No, I think this passage would
+      look better as vertical text&rdquo; and switching the block-progression
+      setting could throw off the careful setting of complex bidirectional
+      text. This problem is even worse with web pages: if the browser does
+      not support vertical text, it will fall back to horizontal, and of
+      course the author has no chance at this point to reset the text for
+      horizontal context. <!-- Making correct layout depend so heavily on the way
+      the text is encoded also violates the separation of content and style,
+      the fundamental principle of semantic markup systems like HTML. --> 
+    </ul> 
+  </div> 
+ 
+  <p>Fundamentally, these problems exist because interrelationships among
+    the layout properties and the nature of the script are realized in the
+    author's mind and not in the system.</p> 
+</div> 
+ 
+<div class="page"> 
+  <h2>Logical Text Layout</h2> 
+ 
+  <p>The set of inline-progression and glyph-orientation combinations that
+    are valid for a run of text depends on inherent properties of the text's
+    script. If we embed this information into the system we can use it to
+    constrain the layout, making it possible to derive one layout property
+    from the other. This lets us automate much of the inline-progression
+    and glyph-orientation switching and allows defining layout switches in
+    terms of the relationships among them.</p> 
+ 
+  <p>Unicode systems already take advantage of this logical model in horizontal
+    text. For example, you don't have to manually tell every run of Hebrew to
+    order itself right-to-left because Unicode already provides that information
+    through its character data tables (which provide directionality info) and
+    the Unicode BIDI Algorithm (which defines how to use that directionality
+    info to get a character ordering). We just need to extend the logic to
+    handle vertical text.</p> 
+ 
+  <div class="section"> 
+    <h3>Intrinsic Script Properties</h3> 
+ 
+    <p>There are three script properties we need to know for logical
+      multi-directional text layout:</p> 
+ 
+    <ul style="line-height: 1; margin-top: 0.2em; margin-bottom: 0"> 
+    <li>horizontal directionality
+    <li>vertical directionality
+    <li>bi-orientational transformation
+    </ul> 
+  </div> 
+</div> 
+ 
+<div class="page"> 
+  <h2>Directionality</h2> 
+ 
+  <p>A script's <dfn>directionality</dfn> is the inline progression direction
+    the script must take in valid text layout. There are two types of
+    directionality:</p> 
+ 
+  <dl> 
+  <dt>horizontal directionality</dt> 
+    <dd>is the directionality used in horizontal text layout. It can be
+      <ul> 
+      <li>left-to-right (<code>ltr</code>)
+        <object data="diagrams/inline-ltr.svg" class="figure"
+                type="image/svg+xml" height="35" width="85"></object> 
+      <li>right-to-left (<code>rtl</code>)
+        <object data="diagrams/inline-rtl.svg" class="figure"
+                type="image/svg+xml" height="35" width="85"></object> 
+      <li>none
+      </ul> 
+    </dd> 
+  <dt>vertical directionality</dt> 
+    <dd>is the directionality used in vertical text layout. It can be
+      <ul> 
+      <li>top-to-bottom (<code>ttb</code>)
+        <object data="diagrams/inline-ttb.svg" class="figure"
+                type="image/svg+xml" height="85" width="35"></object> 
+      <li>bottom-to-top (<code>btt</code>)
+        <object data="diagrams/inline-btt.svg" class="figure"
+                type="image/svg+xml" height="85" width="35"></object> 
+      <li>none
+      </ul> 
+    </dd> 
+  </dl> 
+ 
+  <p>No directionality means the script does not have a preferred inline
+    progression in that orientation. For example, while English must go
+    from left to right in horizontal context, it can go either top to bottom
+    or bottom to top in vertical text (since it doesn't have a vertical
+    directionality). Like English, Japanese also has a left-to-right
+    horizontal directionality. However, in vertical context Japanese must
+    only go from top to bottom, even in a left-to-right block progression.</p> 
+ 
+  <p>By script, the  CJK ideographs (Han), Yi, Mongolian/Manchu, Hangul,
+    Bopomofo, Hiragana, and Katakana all have top-to-bottom vertical
+    directionality. Ogham has bottom-to-top vertical directionality. I
+    believe all other scripts in Unicode have no vertical directionality.</p> 
+ 
+  <div class="section"> 
+    <h3>Directionality in Unicode</h3> 
+ 
+    <p>Aside from generic punctuation, which is neutral, every character in
+      Unicode has been assigned a horizontal directionality. Unfortunately
+      the standard does not provide similar data for vertical directionality.</p> 
+ 
+    <p>Because Unicode does not have a notion of vertical directionality,
+      vertical-only scripts like Mongolian have been assigned a left-to-right
+      horizontal directionality. This is the canonical directionality used
+      in plain text, and it is this inline progression that defines the glyphs'
+      reference orientation, which we will need later.</p> 
+  </div> 
+</div> 
+ 
+<div class="page"> 
+  <h2>Extended values for the 'direction' property</h2> 
+ 
+  <p>In addition to per-character directionality values, the Unicode
+    Bidirectional Algorithm needs to know the overall directionality of
+    the block of text it is ordering. Plain text formatting uses an
+    heuristic to guess the overall directionality from the first few
+    characters. Higher-level protocols like HTML and CSS, however, use
+    an explicit setting instead.
+ 
+  <p>Like the Unicode override controls, and the HTML <code>dir</code> 
+    attribute, the CSS2 <code>direction</code> property only had the two
+    horizontal directions: <code>ltr</code> and <code>rtl</code>. Adding
+    new values allows it to express vertical directionality as well.</p> 
+ 
+  <dl> 
+  <dt><code>direction</code></dt> 
+  <dd><p>Primary directionality. Can take the following values</p> 
+    <dl> 
+      <dt><code>ltr</code></dt> 
+      <dd>Left-to-right directionality in horizontal text;
+          No inherent directionality in vertical text.
+          (Horizontal script)
+          Examples: Latin, Tibetan
+      </dd> 
+      <dt><code>rtl</code></dt> 
+      <dd>Right-to-left directionality in horizontal text;
+          No inherent directionality in vertical text.
+          (Horizontal script)
+          Examples: Arabic, Hebrew
+      </dd> 
+      <dt><code>ttb</code></dt> 
+      <dd>Top to bottom directionality in vertical text;
+          No inherent directionality in horizontal text.
+          (Vertical script)
+          Example: traditional Mongolian
+      </dd> 
+      <dt><code>ltr-ttb</code></dt> 
+      <dd>Left to right directionality in horizontal text;
+          Top to bottom directionality in vertical text.
+          (Bi-orientational script)
+          Examples: Han, modern Yi
+      </dd> 
+      <dt><code>ltr-btt</code></dt> 
+      <dd>Left to right directionality in horizontal text;
+          Bottom to top directionality in vertical text.
+          (Bi-orientational script)
+          Example: Ogham
+      </dd> 
+    </dl> 
+  </dl> 
+ 
+</div> 
+ 
+<div class="page"> 
+  <h2>Classifying Scripts by Directionality</h2> 
+ 
+  <p>Scripts can be classified into three orientational categories:</p> 
+ 
+  <dl> 
+  <dt>horizontal</dt> 
+  <dd>Scripts that have horizontal, but not vertical, directionality.
+    Includes: Latin, Arabic, Hebrew, Devanagari
+  <dt>vertical</dt> 
+  <dd>Scripts that have vertical, but not horizontal, directionality.
+    Includes: Mongolian, Manchu</dd> 
+  <dt>bi-orientational</dt> 
+  <dd>Scripts that have both vertical and horizontal directionality.
+    Includes: Han, Hangul, Yi, Ogham</dd> 
+  </dl> 
+</div> 
+ 
+<div class="page"> 
+  <h2>Bi-orientational Transformation</h2> 
+ 
+  <p>For vertical scripts, we also need to know how the glyphs transform
+    when switching from their standard horizontal configuration to a vertical
+    one. This property is the <dfn>bi-orientational transformation</dfn> 
+    and it can be
+  <dl> 
+  <dt>rotate</dt> 
+    <dd>Rotate the glyph from horizontal to vertical
+      <object data="diagrams/glyph-right.svg" class="figure"
+              type="image/svg+xml" height="80" width="110"></object> 
+    </dd> 
+  <dt>translate</dt> 
+    <dd>Translate the glyph from horizontal to vertical
+      <object data="diagrams/glyph-upright.svg" class="figure"
+              type="image/svg+xml" height="110" width="80"></object> 
+    </dd> 
+  </dl> 
+ 
+  <p>CJK (Chinese/Japanese/Korean) characters translate; they are always
+    upright. Other scripts, such as Ogham and Mongolian, must be rotated.</p> 
+</div> 
+<hr> 
+<div class="page"> 
+  <h2>Using Script Properties to Imply Directions</h2> 
+ 
+  <p>Text in a native orientation needs no additional stylistic hints
+    for proper layout: its inline progression and glyph orientation are
+    both intrinsically mandated by the script. The style system can
+    figure out how to lay them out from the script properties, so settings
+    for inline progression and glyph orientation are not necessary.</p> 
+ 
+  <p>Text in a foreign orientation doesn't need directionality or glyph
+    overrides either. It just needs a few hints: whether to translate
+    upright, or, if it's rotated sideways, which side is "up". Given that,
+    the rules for laying out the text in its native orientation are enough
+    to determine the inline progression and exact glyph orientation.</p> 
+ 
+  <p>With native scripts' layout pre-determined by the script's properties
+    and the non-native scripts constrained enough that they only need a
+    glyph-rotation hint, the typesetter's intervention reduces to just two
+    settings for the <em>entire</em> block of text:</p> 
+ 
+  <ul> 
+  <li>what block progression to use
+  <li>how to orient non-native text <br>(rotate right, rotate left, or stay upright)
+  </ul> 
+</div> 
+ 
+<div class="page"> 
+  <h2>Text Orientation Schemes</h2> 
+ 
+  <p>For horizontal scripts in a vertical orientation, the text is most
+    comfortably laid out as if the whole text block were merely rotated from
+    the horizontal:</p> 
+ 
+  <object data="diagrams/text-flow-natural.svg" class="figure"
+          type="image/svg+xml" height="220" width="300"></object> 
+ 
+  <p>For example, English text in vertical lines that stack from left to right
+    most naturally uses a glyph orientation that faces left. As a consequence
+    of the script's constraints, the inline progression then runs from bottom
+    to top. The same text, by the same logic, would in a right-to-left line
+    stacking context face right and flow within each line from top to bottom.</p> 
+ 
+  <p>To make this the default behavior, we can define a setting,
+    &lsquo;natural&rsquo; that depends on the block progression to make
+    non-native text always face the top of the line stack. The glyph orientation
+    and inline progression  will thus adapt to whichever block progression
+    happens to take effect.</p> 
+ 
+  <p>This layout scheme is most appropriate for dealing with text that has
+    been turned on its side for layout purposes&#8212;as for page headers or
+    captions or table headings. However, a major reason for laying out text
+    in a non-native orientation is mixing horizontal and vertical scripts,
+    which introduces the requirement of making the secondary scripts flow
+    well in the context of the primary script.</p> 
+ 
+  <p>For example, a primarily Mongolian document, which has vertical lines
+    stacking left to right, usually lays its Latin text with the glyphs
+    facing the right.</p> 
+ 
+  <div class="figure-set"> 
+    <img src="diagrams/mongolian-vectors.jpg" class="figure" alt=""> 
+    Exerpt from a multi-script Mongolian dictionary. Columns read
+    from <em>left to right</em> even though the individual lines of
+    Latin are facing the opposite direction.
+  </div> 
+ 
+  <p>This makes the Latin run with the same inline progression
+    as Mongolian and face the same direction it does in other East Asian
+    layouts (which have vertical lines stacking right to left), but the
+    glyphs are facing the <em>bottom</em> of the line stack rather than the
+    top, something they wouldn't do in a primarily-English paragraph.</p> 
+ 
+  <p>Yet another common layout is to keep the horizontal script's glyphs
+    upright and order them from top to bottom; this is frequently done with
+    Latin-script acronyms in vertical East Asian text.</p> 
+ 
+  <div class="figure-set"> 
+    <img src="diagrams/vertical-acronym.gif" alt="" class="figure"> 
+    Latin acronym in vertical Japanese
+  </div> 
+ 
+  <p>To handle these layouts, the style system needs to offer controls for
+    choosing among these different layout schemes. Note, however, that
+    scripts in their native orientations do not need these hints; only the
+    non-native ones do. Also, this is only one simple scheme switch here:
+    there's no need for the designer to set separate absolute inline
+    progression and glyph orientation properties or to set styling properties
+    on each individual text run of a different script.</p> 
+</div> 
+ 
+<div class="page"> 
+  <h2>CSS Properties for Text Layout</h2> 
+ 
+  <p>We can formalize these text layout settings into CSS properties:</p> 
+ 
+  <ul> 
+  <li><code>block-progression</code> to set the block progression direction
+  <li><code>text-orientation-vertical</code> to set the text orientation
+    scheme for non-native scripts
+  </ul> 
+ 
+  <dl> 
+    <dt><code>block-progression</code></dt> 
+    <dd><p>Block progression (line stacking) direction.
+           Can take the following values:</p> 
+        <dl> 
+          <dt><code>TB</code></dt> 
+          <dd class="diagram-set"> 
+              <object data="diagrams/stack-tb.svg" class="figure"
+                      type="image/svg+xml" height="63" width="93"></object> 
+              Top-to-bottom line stacking (horizontal text).<br> 
+              Typically used for most non-East-Asian layout.
+          </dd> 
+          <dt><code>RL</code></dt> 
+          <dd class="diagram-set"> 
+              <object data="diagrams/stack-rl.svg" class="figure"
+                      type="image/svg+xml" height="93" width="63"></object> 
+              Right-to-left line stacking (vertical text).<br> 
+              Typically used for traditional CJK layout.
+          </dd> 
+          <dt><code>LR</code></dt> 
+          <dd class="diagram-set"> 
+              <object data="diagrams/stack-lr.svg" class="figure"
+                      type="image/svg+xml" height="93" width="63"></object> 
+              Left-to-right line stacking (vertical text).<br> 
+              Typically used for traditional Mongolian layout.
+          </dd> 
+        </dl> 
+        <hr> 
+    </dd> 
+    <dt><code>text-orientation-vertical</code> 
+    <dd><p>Glyph orientation scheme to use in vertical text. <strong>Does not
+           affect layout of vertical scripts, only horizontal ones.</strong> 
+           Can take the following values:</p> 
+      <dl> 
+        <dt><code>natural</code> 
+        <dd class="diagram-set"> 
+           <object data="diagrams/text-orientation-natural.svg"
+                    type="image/svg+xml" height="160" width="180"></object> 
+            Non-vertical script runs are laid out as if "up" was
+            towards the top of the line stack (left or right, depending
+            on the block progression in effect).
+        </dd> 
+        <dt><code>left</code> 
+        <dd class="diagram-set"> 
+            <object data="diagrams/text-orientation-left.svg"
+                    type="image/svg+xml" height="100" width="80"></object> 
+            Non-vertical script runs are laid out as if "up" was
+            towards the left side of the line stack.
+       </dd> 
+        <dt><code>right</code> 
+        <dd class="diagram-set"> 
+            <object data="diagrams/text-orientation-right.svg"
+                    type="image/svg+xml" height="100" width="80"></object> 
+            Non-vertical script runs are laid out as if "up" was
+            towards the right of the line stack.
+        </dd> 
+        <dt><code>upright</code> 
+        <dd class="diagram-set"> 
+            <object data="diagrams/text-orientation-upright.svg"
+                    type="image/svg+xml" height="150" width="80"></object> 
+ 
+            Non-vertical scripts' characters read top to bottom, with
+            each grapheme cluster oriented upright.
+        </dd> 
+      </dl> 
+      <p class="note">For handling vertical-only scripts in horizontal layout,
+         a <code>text-orientation-horizontal</code> property is also
+         necessary; it takes effect only when the block progression is
+         top-to-bottom and only affects non-horizontal scripts like
+         Monglian. To keep the discussion less verbose, we will only cover
+         the vertical case here.</p> 
+    </dd> 
+  </dl> 
+</div> 
+ 
+<div class="page"> 
+  <h2>Summary of Logical Layout Controls</h2> 
+ 
+  <p>In summary, to lay out a block of arbitrary, mixed-script text, the
+    layout system needs to offer only three controls:</p> 
+    <ul> 
+    <li>overall directionality (BIDI property)
+    <li>block progression direction (stylistic property)
+    <li>text orientation scheme (stylistic property)
+    </ul> 
+ 
+  <p>Because of the way correctness constraints are embedded in this layout
+    system, any combination of the block-progression and text-orientation
+    properties will result in a correct, if not optimally-configured, layout
+    of any block of arbitrary mixed-script text.</p> 
+ 
+  <p>The next step is detailing exactly how to implement such a system.</p> 
+</div> 
+ 
+<div class="page"> 
+  <h2>Line Stacking vs. Line Composition</h2> 
+ 
+  <p>Laying out text in lines is really two separate problems: composing the
+    lines and stacking them. As far as line stacking is concerned, the lines
+    are just boxes. The arrangement of items within the line box doesn't
+    matter. The layout code just needs to rotate and stack the boxes according
+    to the block-progression settings.</p> 
+ 
+  <object data="diagrams/stack-rl-outline.svg" class="figure"
+          type="image/svg+xml" height="320" width="200"></object> 
+ 
+  <p>Figuring out what to do when different layout elements have different
+    <code>block-progression</code> values is hard, especially in CSS's fluid
+    layout model&#8212;but that's a box layout problem, not a text layout problem.
+    Let's move on to putting together the text <em>inside</em> the line boxes.</p> 
+</div> 
+ 
+<div class="page"> 
+  <h2>Line Composition</h2> 
+ 
+  <p><dfn>Line composition</dfn> is the process of laying out the text within
+    a line.</p> 
+  <p>We will assume that all sets of combining characters have been
+    resolved into their respective grapheme clusters because that process
+    depends only on the logical order of the characters and is not dependent
+    on layout modes. With that out of the way, there are three other
+    processes in line composition:</p> 
+  <ul> 
+  <li>Ordering the characters
+  <li>Rotating the characters
+  <li>Shaping the characters
+  </ul> 
+  <p>Shaping only happens for some scripts and is wholly dependent on the
+    order and orientation of the characters, so we will discuss it last.</p> 
+</div> 
+ 
+<div class="page"> 
+  <h2>The Unicode Bidirectional Algorithm</h2> 
+ 
+  <p>If all the characters in the line were guaranteed to have the same
+    inline progression, then ordering the characters would be very
+    straightforward. However, because different scripts have different
+    directionalities, lines can contain a mixture of inline progressions.
+    The <dfn>Unicode Bidirectional Algorithm</dfn> can resolve the order of
+    characters within a mixed-direction line based on the directionalities
+    assigned to each character.</p> 
+ 
+  <p>Unicode Standard Annex #9 (UAX9) defines the BIDI algorithm in terms
+    of the horizontal left-to-right (<code>ltr</code> or <code>L</code>)
+    and right-to-left (<code>rtl</code> or <code>R</code>) directionalities.
+    However, the character-ordering algorithm itself can handle a model
+    extended with vertical directionalities if we just abstract it to apply
+    to two arbitrary, opposing directionalities rather than just to
+    right-to-left and left-to-right.</p> 
+</div> 
+ 
+<div class="page"> 
+  <h2>Mapping Directionalities</h2> 
+ 
+  <p>To resolve the horizontal and vertical directionalities to the two
+    directionalities used in the BIDI algorithm, we'll use a map from the
+    concrete directionalities to the abstract directionalities
+    <span class="map">high-to-low</span> and
+    <span class="map">low-to-high</span>.
+ 
+  <p>The directions <span class="directionality">left</span>,
+    <span class="directionality">right</span>,
+    <span class="directionality">top</span>, and
+    <span class="directionality">bottom</span> map to
+    <span class="map">high</span> or <span class="map">low</span> based on
+    the values of text-orientation and block-progression. <strong>The mapping
+    must apply to everything:</strong></p> 
+  <ul> 
+  <li>the individual character's directionality,
+  <li>embedding and override codes,
+  <li>the CSS direction values,
+  <li>HTML dir attributes,
+  <li>etc.
+  </ul> 
+ 
+  <p>Note that <strong>the algorithm remains unchanged when dealing with
+    vertical text</strong>. What changes is the directionality input.</p> 
+ 
+  <p>In vertical context, bi-orientational scripts use their vertical
+    directionality and behave as vertical, not horizontal, scripts.
+    Han, for example, as a <code>ltr-ttb</code> script, is treated as
+    <code>ttb</code> (top to bottom), <em>not</em> <code>ltr</code> 
+    (left to right). The <code>ltr-ttb</code> value for <code>direction</code> 
+    is correspondingly treated the same way as the value <code>ttb</code>.</p> 
+ 
+  <div class="section"> 
+    <h3>Mapping for <code>text-orientation: right</code></h3> 
+ 
+    <p>When the text-orientation is <code>right</code> or the text-orientation is
+    <code>natural</code> and the block-progression is <code>RL</code></p> 
+ 
+    <ul> 
+    <li>Map <span class="directionality">ttb</span> and <span class="directionality">ltr</span> 
+        to <span class="map">htl</span> (high to low)
+    <li>Map <span class="directionality">btt</span> and <span class="directionality">rtl</span> 
+        to <span class="map">lth</span> (low to high)
+    </ul> 
+ 
+    <object data="diagrams/bidi-right.svg" class="figure"
+            type="image/svg+xml" height="300" width="135"></object> 
+  </div> 
+ 
+  <div class="section"> 
+    <h3>Mapping for <code>text-orientation: left</code></h3> 
+ 
+    <p>When the text-orientation is <code>left</code> or the text-orientation is
+    <code>natural</code> and the block-progression is <code>LR</code></p> 
+ 
+    <ul> 
+    <li>Map <span class="directionality">ttb</span> and <span class="directionality">rtl</span> 
+        to <span class="map">lth</span> (low to high)
+    <li>Map <span class="directionality">btt</span> and <span class="directionality">ltr</span> 
+        to <span class="map">htl</span> (high to low)
+    </ul> 
+ 
+    <object data="diagrams/bidi-left.svg" class="figure"
+            type="image/svg+xml" height="300" width="135"></object> 
+  </div> 
+ 
+  <div class="section"> 
+    <h3>Mapping for <code>text-orientation: upright</code></h3> 
+ 
+    <p>When the text-orientation is <code>upright</code></p> 
+ 
+    <ul> 
+    <li>Map <span class="directionality">ttb</span>, <span class="directionality">ltr</span> 
+        and <span class="directionality">rtl</span> 
+        to <span class="map">htl</span> (high to low)
+    <li>Map <span class="directionality">btt</span> and
+        to <span class="map">lth</span> (low to high)
+    </ul> 
+ 
+    <object data="diagrams/bidi-upright.svg" class="figure"
+            type="image/svg+xml" height="300" width="135"></object> 
+  </div> 
+</div> 
+ 
+<div class="page"> 
+  <h2>Running BIDI</h2> 
+ 
+  <p>When the BIDI algorithm is run on the text, the algorithm's notion of
+    <span class="bidi-direction">right</span> will represent our
+    <span class="map">low</span> and <span class="bidi-direction">left</span> 
+    will represent our <span class="map">high</span>. Notice that the
+    <span class="directionality">left-to-right</span> directionality always maps
+    to <span class="map">high-to-low</span> and <span class="map">high-to-low</span> 
+    always maps to the algorithm's <span class="bidi-direction">left-to-right</span>.
+    This is to make sure numbers, which are processed specially, always come
+    out right.</p> 
+ 
+  <p>That takes care of the ordering. Next we need to determine each character's
+    glyph orientation.</p> 
+</div> 
+ 
+<div class="page"> 
+  <h2>Glyph Orientation</h2> 
+ 
+  <p>Before the system can paint the text (or even do shaping and alignment), it
+    needs to know how to rotate (or not rotate) the glyphs. For vertical and
+    bi-orientational scripts, the glyph orientation is derived from the script
+    properties. For horizontal scripts, it's given by the text-orientation
+    property. Glyph rotation is always affects each grapheme cluster together
+    as one unit.</p> 
+ 
+  <p>For vertical scripts such as Mongolian, facing up (&ldquo;upright&rdquo;)
+    is defined to be the orientation used when the text is set
+    <em>horizontally</em> using it's <em>Unicode-defined
+    directionality</em> (in this case, <code>ltr</code>) even though this may
+    not be the true upright position of the glyph. This is because fonts are
+    generally encoded for use in horizontal text, not vertical text.</p> 
+ 
+  <table class="data" style="margin: 0.5em auto 1em;"> 
+    <caption style="font: inherit; font-weight: bold; margin-top: 1em;">Mongolian glyph</caption> 
+    <thead><tr><th>facing up</th><th>truly upright</th></tr></thead> 
+    <tbody><tr><td><object data="diagrams/mongolian-face-up.svg"
+                           type="image/svg+xml" height="40" width="40"></object></td> 
+               <td><object data="diagrams/mongolian-upright.svg"
+                           type="image/svg+xml" height="40" width="40"></object></td></tr></tbody> 
+  </table> 
+ 
+  <p>Transformations for punctuation should be handled by using the vertical
+    glyph variants given in the font, but only when the primary direction of
+    the text has a vertical directionality component or when the
+    text-orientation is <code>upright</code>. (If the text is primarily
+    horizontal text rotated sideways, then the punctuation should likewise be
+    horizontal punctuation rotated sideways.)</p> 
+</div> 
+<hr> 
+<div class="page"> 
+  <h2>Vertical Scripts: Deriving Glyph Orientation</h2> 
+ 
+  <p>Han and Kana and Hangul and Yi need to be kept upright (0&deg; rotation)
+    because they use the same orientation in both horizontal and vertical text.
+    Mongolian (and Ogham), however, rotate from one context to the other and
+    so their glyphs must be rotated 90&deg; from their horizontal orientation when
+    used in vertical context. Given the script's horizontal and vertical
+    directionalities and its bi-orientational transformation:</p> 
+ 
+  <table class="data"> 
+    <caption>System's Knowledge of Vertical Scripts' Properties</caption> 
+    <thead> 
+ 
+      <tr><th></th> 
+          <th scope="col">Han/&#x200b;Hangul/&#x200b;Kana/&#x200b;Yi</th> 
+          <th scope="col">Mongolian/&#x200b;Manchu</th> 
+          <th scope="col">Ogham</th></tr> 
+    </thead> 
+    <tbody> 
+      <tr><th scope="row">(cannonical) horizontal directionality</th> 
+ 
+          <td><code>ltr</code></td> 
+          <td><code>(ltr)</code></td> 
+          <td><code>ltr</code></td> 
+      </tr> 
+      <tr><th scope="row">vertical directionality</th> 
+          <td><code>ttb</code></td> 
+ 
+          <td><code>ttb</code></td> 
+          <td><code>btt</code></td> 
+      </tr> 
+      <tr><th scope="row">transformation</th> 
+          <td>translation</td> 
+          <td>rotation</td> 
+          <td>rotation</td> 
+      </tr> 
+    </tbody> 
+  </table> 
+ 
+  <p>the glyph orientation can be derived as follows:</p> 
+ 
+  <table class="data"> 
+    <caption>System's Derivation of Vertical Scripts' Orientation</caption> 
+    <thead> 
+ 
+      <tr><th></th> 
+          <th scope="col">Han/&#x200b;Hangul/&#x200b;Kana/&#x200b;Yi</th> 
+          <th scope="col">Mongolian/&#x200b;Manchu</th> 
+          <th scope="col">Ogham</th></tr> 
+    </thead> 
+    <tbody> <!-- images representing these cases --> 
+      <tr><th scope="row">horizontal orientation (vector direction)</th> 
+ 
+        <td> 
+          <object data="diagrams/glyph-orientation-ltr.svg" class="figure"
+                  type="image/svg+xml" height="80" width="110"> 
+            glyph orientation: 0&deg;; inline-progression: 90&deg;
+          </object> 
+        </td> 
+        <td> 
+          <object data="diagrams/glyph-orientation-ltr.svg" class="figure"
+                  type="image/svg+xml" height="80" width="110"> 
+            glyph orientation: 0&deg;; inline-progression: 90&deg;;
+          </object> 
+        </td> 
+        <td> 
+          <object data="diagrams/glyph-orientation-ltr.svg" class="figure"
+                  type="image/svg+xml" height="80" width="110"> 
+            glyph orientation: 0&deg;; inline-progression: 90&deg;;
+          </object> 
+        </td> 
+      </tr> 
+      <tr><th scope="row">glyph transformation</th> 
+          <td>Static</td> 
+          <td>Rotate with inline progression: 90&deg;
+              <abbr title="clockwise">cw</abbr> from ltr to ttb</td> 
+          <td>Rotate with inline progressio: 90&deg;
+              <abbr title="counter-clockwise">ccw</abbr> from ltr to btt</td> 
+      </tr> 
+      <tr><th scope="row">vertical orientation</th> 
+        <td> 
+          <object data="diagrams/glyph-orientation-ttb-trans.svg" class="figure"
+                  type="image/svg+xml" height="80" width="80"
+                  title="glyph orientation: 0&deg;; inline-progression: 180&deg;;"> 
+            glyph orientation: 0&deg;; inline-progression: 180&deg;;
+          </object> 
+          </a> 
+        </td> 
+        <td> 
+          <object data="diagrams/glyph-orientation-ttb-rot.svg" class="figure"
+                  type="image/svg+xml" height="80" width="80"
+                  title="glyph orientation: 90&deg;; inline-progression: 180&deg;;"> 
+            glyph orientation: 90&deg;; inline-progression: 180&deg;;
+          </object> 
+        </td> 
+        <td> 
+          <object data="diagrams/glyph-orientation-btt-rot.svg" class="figure"
+                  type="image/svg+xml" height="80" width="80"
+                  title="glyph orientation: 270&deg;; inline-progression: 0&deg;"> 
+            glyph orientation: 270&deg;; inline-progression: 0&deg;
+          </object> 
+        </td> 
+      </tr> 
+    </tbody> 
+  </table> 
+</div> 
+<hr> 
+<div class="page"> 
+  <h2>Horizontal Scripts: Applying Text Orientation</h2> 
+ 
+  <p>Horizontal scripts get their glyph rotation directly from
+    the style properties:</p> 
+ 
+  <div class="section"> 
+    <h3>For <code>text-orientation: right</code> 
+      <span>(or <code>text-orientation: natural</code>&nbsp; when the block-progression is RL)</span></h3> 
+ 
+    <p>Rotate horizontal scripts' grapheme clusters 90&deg; to the right.</p> 
+    <object data="diagrams/glyph-right.svg" class="figure"
+            type="image/svg+xml" height="80" width="110"></object> 
+  </div> 
+  <div class="section"> 
+    <h3>For <code>text-orientation: left</code> 
+      <span>(or <code>text-orientation: natural</code>&nbsp; when the block-progression is RL)</span></h3> 
+ 
+    <p>Rotate horizontal scripts' grapheme clusters 90&deg; to the left.</p> 
+    <object data="diagrams/glyph-left.svg" class="figure"
+            type="image/svg+xml" height="80" width="110"></object> 
+  </div> 
+  <div class="section"> 
+    <h3>For <code>text-orientation: upright</code></h3> 
+ 
+    <p>Keep glyphs for horizontal scripts upright and stack grapheme clusters vertically.</p> 
+    <object data="diagrams/glyph-upright.svg" class="figure"
+            type="image/svg+xml" height="110" width="80"></object> 
+  </div> 
+</div> 
+<hr> 
+<div class="page"> 
+  <h2>Character Shaping</h2> 
+ 
+  <p><dfn>Character shaping</dfn> is the process of selecting, based on context, which of
+    several glyph variants of a letter should be used. This is typical of cursive
+    scripts like Arabic and Mongolian, in which the shape of a letter depends on
+    whether it comes at the start of a word, in the middle of a word, or at the
+    end of a word.</p> 
+ 
+  <object data="diagrams/shaping.svg" class="figure"
+          type="image/svg+xml" height="160" width="220"></object> 
+ 
+  <p>According to Unicode BIDI, character shaping occurs after BIDI reordering:
+    the Arabic character shaped as an &ldquo;initial&rdquo; will always be on the
+    right, even if the text is given a left-to-right override. This ensures that
+    the letters always visually connect. (If shaping happened before reordering,
+    an initial form on the right side of the word would wind up on the left and
+    be trying to connect to nothing.)</p> 
+</div> 
+ 
+<div class="page"> 
+  <h2>Reverse Shaping</h2> 
+ 
+  <p>If a shaping script's characters are ordered in reverse because the text's
+    directionality maps within the BIDI algorithm to a directionality other than
+    its standard horizontal one, then the shaping needs to be done in reverse
+    also. This happens, for example, with Mongolian when its
+    <span class="directionality">top-to-bottom</span> directionality maps to
+    the BIDI algorithm's notion of <span class="bidi-direction">right-to-left</span>.
+    Mongolian's canonical horizontal directionality is left-to-right,
+    so normally it would map to <span class="bidi-direction">left-to-right</span> 
+    and the shaping algorithm is designed for that case.
+ 
+  <p>To cope with this problem, we can isolate the affected string and either
+  <ul> 
+  <li>invert it, shape it, then un-invert it, or
+  <li>tell the shaping function to shape in reverse: to shape characters in the
+    initial positions as finals and characters in the final positions as initials
+  </ul> 
+ 
+  <p>The result of this process in a normal orientation would be a lot of
+    disconnected letters. However, once the glyph orientation is applied, the
+    glyphs will connect properly.</p> 
+ 
+  <object data="diagrams/reverse-shaping.svg" class="figure"
+          type="image/svg+xml" height="140" width="240"></object> 
+ 
+  <p>Arabic and Mongolian, both shaping scripts, can go in the same direction
+    or in opposite directions, so blindly reverse-shaping the entire character
+    string doesn't work. However, shaping occurs only within each directional
+    level run, and it is also constrained to runs of text in the same script;
+    Mongolian characters, from Arabic's point of view, form as concrete a
+    boundary as Latin ones do. It is therefore possible to break up the text
+    into pieces that have characters from no more than one shaping-affected
+    script without compromising the accuracy of the shaping. Each of these
+    pieces can then be shaped individually, in reverse if necessary.</p> 
+</div> 
+ 
+<div class="page"> 
+  <h2>Finishing Off</h2> 
+ 
+  <p>Once the line is composed, all that remains is to lock its
+    <span class="bidi-direction">high</span> and
+    <span class="bidi-direction">low</span> ends to the appropriate sides of
+    the block and stack the lines according to the block-progression setting.</p> 
+</div> 
+ 
+<div class="page"> 
+  <h2>Data Missing from Unicode</h2> 
+ 
+  <p>In addition to knowing the text, its primary directionality, and its
+    styling properties, the implementation needs to know something about the
+    characters themselves to be able to take advantage of the logical model.
+    For each character, the following information must be available to the
+    text layout algorithm:
+ 
+    <ul> 
+    <li><em>horizontal directionality</em> 
+    <li><em>vertical directionality</em> 
+    <li>for vertical scripts, the <em>transformation</em> between horizontal
+      and vertical orientations
+    </ul> 
+ 
+  <p>Unicode currently provides horizontal directionality, but not vertical
+    directionality or transformation. Also, for the model to be complete,
+    Unicode would have to provide BIDI control characters for the extended
+    directionality values equivalent to the ones for horizontal-only
+    directionality settings.</p> 
+</div> 
+<hr> 
+<div class="page"> 
+  <h2>Conclusion</h2> 
+ 
+  <p>There are a lot of cool, unusual, and <em>useful</em> ways of combining
+    writing systems. By using constraints inherent in each script, <em>logical text
+    layout</em> creates a framework for mixed-script typesetting that is flexible
+    enough to handle more than just the basic possibilities, yet automatic and
+    robust enough to be practical. Because it does not rely on directionality
+    overrides or special fonts to work, the underlying text is portable and can
+    be used, stripped of all styling information, in other Unicode contexts.</p> 
+</div> 
+<!--<hr>
+<div class="page appendix">
+  <h2>Appendix: Logical Text Layout for Vertical Scripts in Horizontal Context</h2>
+ 
+  <p>The same flexibility offered to horizontal scripts in vertical layout
+    can be defined for vertical scripts in horizontal layout as well. This
+    requires defining a <code>text-orientation-horizontal</code> property that
+    controls the layout of vertical scripts in a horizontal-flow block.</p>
+ 
+  <div class="section">
+    <h3><a name="text-orientation-horizontal">Defining <code>text-orientation-horizontal</code></a></h3>
+    <dl>
+      <dt><code>text-orientation-horizontal</code>
+      <dd><p>Glyph orientation scheme to use in horizontal text.
+             Only affects layout of non-horizontal scripts.
+             Can take the following values</p>
+          <dl>
+            <dt><code>normal</code>
+            <dd>Non-horizontal scripts are laid out using their canonical
+              Unicode-defined directionality. E.g. Mongolian and Manchu
+              would be left-to-right. This is the default value.
+            <dt><code>left</code>
+            <dd>Non-horizontal scripts are laid out left to right. Glyphs
+              are oriented accordingly.</dd>
+            <dt><code>right</code>
+            <dd>Non-horizontal scripts are laid out right to left. Glyphs
+              are oriented accordingly.</dd>
+            <dt><code>context</code>
+            <dd>Same as <code>left</code> if the enclosing block's
+              directionality has an <code>ltr</code> horizontal component;
+              same as <code>right</code> otherwise.
+            <dt><code>upright</code>
+            <dd>Non-horizontal scripts' characters are laid out using their
+               canonical Unicode-defined horizontal directionality but
+                each grapheme cluster oriented is oriented as it would be
+                in <em>vertical</em> layout. Character shaping does not occur;
+                use only isolated forms.</dd>
+            <dt><code>natural</code>
+            <dd>If it were defined, this would depend on extra information
+              about the usual block progression used in traditional layout
+              for the primary script. In practice, there's no significant
+              use case.
+          </dl>
+      </dd>
+    </dl>
+ 
+    <div class="para">
+    <p>The values for <code>text-orientation-horizontal</code> are direction-based
+      rather than glyph-orientation-based as for <code>text-orientation-vertical</code>.
+      This asymmetry is because of
+    <ul>
+      <li>Vertical flow having two viable block progression directions (right to left
+        and left to right) whereas horizontal flow only has one (top to bottom).
+      <li>Common use of two directonalities in horizontal scripts vs. the almost
+        exclusive use of top-to-bottom directionality in vertical scripts.
+    </ul>
+    <p>(It is an attempt to design each property, <code>text-orientation-vertical</code>
+       and <code>text-orientation-horizontal</code>, to be better suited to its own
+       circumstances.)</p>
+    </div>
+  </div>
+ 
+  <div class="section">
+    <h3>Use Cases</h3>
+ 
+    <div class="section">
+      <h4>Mongolian Samples in Arabic Text</h4>
+      <p>Traditional Mongolian is strongly vertical, but fragments of it may be
+        set horizontally when they appear in the context of a horizontal script
+        block. As most horizontal scripts are left-to-right, Mongolian's designated
+        horizontal directionality in Unicode is left-to-right. It is not, however,
+        a strongly left-to-right script, and an Arabic typesetter could decide to
+        set it right-to-left, in line with the Arabic. Avoiding bidirectionality
+        makes a mixed text easier to read, so using
+        <code>text-orientation-horizontal: context</code> would make inline
+        Mongolian adapt to the direction of the primary script.</p>
+    </div>
+    <div class="section">
+      <h4>Horizontal Mongolian</h4>
+      <p>Most systems don't support vertical text, especially not left-to-right
+        columns. Mongolian computer typesetting systems often work around this
+        problem by laying out the text in horizontal lines from right to left,
+        using an upside-down font, then rotating the page 90&deg; to get vertical
+        text. This technique wouldn't work quite as well in a Unicode-based system,
+        however, because a) Mongolian is designated left-to-right b) Unicode
+        character shaping assumes this c) it requires using an upside-down font.</p>
+ 
+      <p>The way <code>text-orientation-horizontal: right</code> is defined,
+        the layout system would take care of shaping the characters properly,
+        ordering them from right to left, and flipping the glyphs. A system that
+        only supports horizontal text layout could thus take standard Unicode
+        text and, using regular Monoglian fonts, print out correctly-set
+        Mongolian. Because it does not use font, encoding, or directionality
+        hacks, the same text can be transferred without change to a different
+        Unicode-based typesetting system that has full vertical text support&nbsp;&#8212;
+        and still render correctly.</p>
+    </div>
+    <div class="section">
+      <h4>Right-to-left Chinese</h4>
+      <p>Historically, Chinese was not written horizontally, only vertically,
+        in columns ordered right to left. Due to the Western influence of recent
+        years, Chinese (and Japanese and Korean) became bi-orientational,
+        acquiring a strong left-to-right directionality in horizontal text.
+        However, there still remains some use of what appears to be right-to-left
+        Chinese in single-line banners and the like. This can be viewed as a
+        logical extension of vertical text layout: it is Chinese in vertical
+        columns, ordered right to left&#8212;except the columns are only one
+        character tall.</p>
+      <p>The effect can be achieved, without using a right-to-left override,
+        by stripping the Chinese text of its horizontal directionality with
+        a <em>top-to-bottom</em> (<code>ttb</code>) override and styling it with
+        <code>text-orientation-horizontal: context</code> or
+        <code>text-orientation-horizontal: right</code>. Because it still
+        retains the property of being a vertical script, it will still render
+        as top-to-bottom text when placed in a vertical layout.</p>
+    </div>
+  </div>
+</div> --> 
+ 
+<div class="page" id="acknowledgements"> 
+  <h2>Acknowledgements</h2> 
+ 
+  <p>Thanks go out to:</p> 
+ 
+  <ul> 
+  <li>Martin Heijdra at the East Asian Library, for his guidance, expertise,
+      and enthusiasm. I had never imagined that the bibliographer helping
+      me find books would turn out to be an expert on international typography
+      and Mongolian in particular.
+  <li>Ian Hickson, the members of the www-style mailing list, the members of
+      the CSS Working Group, and the contributors to the Mozilla Project
+      for tempering my technical skills and CSS knowledge over the years
+  <li>The CSS Working Group for giving me a chance to fix everything I found
+      wrong in the CSS3 Text drafts.
+  <li>H&aring;kon Wium Lie and <a href="http://www.opera.com/">Opera Software</a> 
+      for supporting me in this project, to the point of even <em>paying</em> me
+      over the summer to work on it. I only wish it hadn't taken so long so that
+      I could spend more time on QA. &#x263A;
+  <li>Brian W. Kernighan for taking on the role of my project advisor within
+      the Princeton Computer Science Department.
+  </ul> 
+</div> 
+<hr> 
+<div class="page" id="bibliography"> 
+  <h2>Bibliography</h2> 
+ 
+  <ul> 
+  <li>Bert Bos; H&aring;kon Wium Lie; Chris Lilley; Ian Jacobs. <cite>Cascading
+    Style Sheets, level 2</cite>. 1998. W3C Recommendation.
+    URL: http://www.w3.org/&#x200b;TR/&#x200b;REC-CSS2
+  <li>Davis, Mark. <cite>The Bidirectional Algorithm.</cite> 17 April 2003.
+    Unicode Standard Annex #9.
+    URL: http://www.unicode.org/&#x200b;unicode/&#x200b;reports/&#x200b;tr9/&#x200b;tr9-11
+  <li>Heijdra, Martinus. Mongolian Text Layout. Spring 2003-present.
+  <li>Suignard, Michel. <cite>CSS3 Text</cite>. May 2003. W3C Candidate Recommendation.
+    URL: http://www.w3.org/&#x200b;TR/&#x200b;2003/&#x200b;CR-css3-text-20030514/
+  <li>The Unicode Consortium. <cite>The Unicode Standard: Version 4.0.0</cite>.
+    URL: http://www.unicode.org/&#x200b;unicode/&#x200b;standard/&#x200b;versions/&#x200b;enumeratedversions.html#Unicode_4_0_0
+  </ul> 
+</div> 
+ 
+</body> 
+</html>
